@@ -1,0 +1,5 @@
+<div class ="row">
+  <% artistRecommendations.forEach(function(artistRecommendation){ %>
+     <%- include('recommendation', {recommendation: artistRecommendation}); %>
+  <% }); %>
+</div>

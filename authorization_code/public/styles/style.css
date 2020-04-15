@@ -1,0 +1,30 @@
+body{
+  font-family: 'Open Sans Condensed', sans-serif;
+  background-color: darkslategray;
+  color: orange;
+}
+#login, #loggedin {
+  display: none;
+}
+.text-overflow {90
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 500px;
+}
+h1{
+      width: 40%;
+    margin: auto;
+}
+#fms-preview{
+  background-image: url()
+}
+.row{
+  width:90%;
+  margin:auto;
+}
+.container-fluid > p{
+      width: 35%;
+    margin: auto;
+    padding-bottom: 2%;
+}

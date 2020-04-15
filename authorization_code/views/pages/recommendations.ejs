@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous"/>  
+      <link rel ='stylesheet' type ='text/css' href ="styles/style.css"/>
+      <title>some bands for you!</title>
+  </head>
+  <body>
+    <div class='container-fluid'>
+      <h1>Give these fine folx a listen </h1>
+      <p> dont like your recommendations?  refresh the page to see more!</p>
+      <div> <%- include('../recommendationList', {artistRecommendations : recList}); %> </div>
+    </div>
+  </body>
+</html>
+<%# renderedList %>
