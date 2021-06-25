@@ -13,11 +13,15 @@ body{
   width: 500px;
 }
 h1{
-      width: 40%;
+      width: 30%;
     margin: auto;
 }
 #fms-preview{
-  background-image: url()
+    width: 30%;
+    display: block;
+    margin: auto;
+    padding-top: 10px;
+    opacity: 70%;
 }
 .row{
   width:90%;
