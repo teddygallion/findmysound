@@ -13,7 +13,7 @@ body{
   width: 500px;
 }
 h1{
-      width: 30%;
+      width: 40%;
     margin: auto;
 }
 #fms-preview{
@@ -28,7 +28,7 @@ h1{
   margin:auto;
 }
 .container-fluid > p{
-      width: 35%;
+      width: 40%;
     margin: auto;
     padding-bottom: 2%;
 }
