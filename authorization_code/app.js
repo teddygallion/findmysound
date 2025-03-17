@@ -1,11 +1,14 @@
-var path = require('path');
-var express = require('express'); // Express web server framework
-var cors = require('cors');
-var cookieParser = require('cookie-parser');
-var router = require('./routers/router')
-const PORT = process.env.PORT || 5000
+const path = require('path');
+const express = require('express'); // Express web server framework
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const router = require('./routers/router')
+const dotenv = require("dotenv")
+dotenv.config();
 
-var app = express();
+const PORT = process.env.PORT || 3000
+
+const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '/views'));
 

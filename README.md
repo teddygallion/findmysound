@@ -14,9 +14,6 @@ ES6, Node.js, Express, EJS
 
 ## Demo
 [Live demo here!](https://findmysound.herokuapp.com "Find My Sound")
-if you dont have a Spotify account, try my dummy account:
-email: teddygallion@gmail.com
-pw: Ponder0sa
 ## Authors
 
 Teddy Gallion, Frontend, Backend, Development, Testing

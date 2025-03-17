@@ -1,178 +1,192 @@
-var express = require('express');
-var router = express.Router();
-require('dotenv').config();
-var client_id = process.env.CLIENT_ID;
-var client_secret = process.env.CLIENT_SECRET;
-var redirect_uri = 'https://findmysound.herokuapp.com/callback'; // Your redirect uri
-var stateKey = 'spotify_auth_state';
-var generateRandomString = require('../utils').generateRandomString;
-var filterResults = require('../utils').filterResults;
-var request = require('request'); // "Request" library
-var querystring = require('querystring');
-var cookieParser = require('cookie-parser');
+const dotenv = require('dotenv').config();
+const express = require('express');
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const router = express.Router();
+const querystring = require('querystring');
+const cookieParser = require('cookie-parser');
+const { generateRandomString, filterResults } = require('../utils');
 
-
-
-// define the home page route
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
+const redirect_uri = process.env.REDIRECT_URI; // Your redirect URI
+const stateKey = 'spotify_auth_state';
+console.log(redirect_uri)
 router.use(cookieParser());
-router.get('/login', function(req, res) {
 
-  var state = generateRandomString(16);
-  res.cookie(stateKey, state);
+router.get('/login', (req, res) => {
+    const state = generateRandomString(16);
+    res.cookie(stateKey, state);
 
-  // your application requests authorization
-  var scope = 'user-read-private user-read-email user-top-read';
-  res.redirect('https://accounts.spotify.com/authorize?' +
-    querystring.stringify({
-      response_type: 'code',
-      client_id: client_id,
-      scope: scope,
-      redirect_uri: redirect_uri,
-      state: state
-    }));
+    const scope = 'user-read-private user-read-email user-top-read';
+    res.redirect(`https://accounts.spotify.com/authorize?` +
+        querystring.stringify({
+            response_type: 'code',
+            client_id,
+            scope,
+            redirect_uri,
+            state
+        }));
 });
 
-router.get('/callback', function(req, res) {
+router.get('/callback', async (req, res) => {
+    const code = req.query.code || null;
+    const state = req.query.state || null;
+    const storedState = req.cookies ? req.cookies[stateKey] : null;
 
-  // your application requests refresh and access tokens
-  // after checking the state parameter
+    if (state === null || state !== storedState) {
+        return res.redirect('/#' + querystring.stringify({ error: 'state_mismatch' }));
+    }
 
-  var code = req.query.code || null;
-  var state = req.query.state || null;
-  var storedState = req.cookies ? req.cookies[stateKey] : null;
-
-  if (state === null || state !== storedState) {
-    res.redirect('/#' +
-      querystring.stringify({
-        error: 'state_mismatch'
-      }));
-  } else {
     res.clearCookie(stateKey);
-    var authOptions = {
-      url: 'https://accounts.spotify.com/api/token',
-      form: {
-        code: code,
-        redirect_uri: redirect_uri,
-        grant_type: 'authorization_code'
-      },
-      headers: {
-        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
-      },
-      json: true
-    };
 
-    request.post(authOptions, function(error, response, body) {
-      if (error || response.statusCode !== 200) {
-        res.redirect('/#' +
-          querystring.stringify({
-            error: 'invalid_token'
-          })
-          );
-      }
-      res.cookie('access_token', body.access_token);
-      res.cookie('refresh_token', body.refresh_token);
-      // we can also pass the token to the browser to make requests from there
-      res.redirect('/recommendations?' +
-       querystring.stringify({ 
-         access_token: `req.cookies.access_token`,
-         refresh_token: `req.cookies.refresh_token`
-       })
-       );
-    });
-  }
-});
-router.get('/refresh_token', function(req, res) {
+    try {
+        const authResponse = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + Buffer.from(`${client_id}:${client_secret}`).toString('base64'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: querystring.stringify({
+                code,
+                redirect_uri,
+                grant_type: 'authorization_code'
+            })
+        });
 
-  // requesting access token from refresh token
-  var refresh_token = req.query.refresh_token;
-  var authOptions = {
-    url: 'https://accounts.spotify.com/api/token',
-    headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
-    form: {
-      grant_type: 'refresh_token',
-      refresh_token: refresh_token
-    },
-    json: true
-  };
+        const body = await authResponse.json();
 
-  request.post(authOptions, function(error, response, body) {
-    if (!error && response.statusCode === 200) {
-      var access_token = body.access_token;
-      res.send({
-        'access_token': access_token
-      });
-    }
-  });
-});
-
-router.get('/recommendations', function(req, res) {
-  const access_token = req.cookies.access_token;
-  const refresh_token = req.cookies.refresh_token;
-  if (req.cookies.access_token == null || req.cookies.refresh_token == null) {
-    res.redirect('/login');
-  }
-  var options = {
-    url: 'https://api.spotify.com/v1/me/top/artists?limit=5',
-    headers: {
-      'Authorization': 'Bearer ' + access_token
-    },
-    json: true
-  };
-  request.get(options, function(error, response, body) {
-    //// grab users top artists, put artist id's into an array//////
-    let topArtistIDs = [];
-    let items = body.items;
-    for (let item of items) {
-      topArtistIDs.push(item.id);
-    }
-    let artistSeedList = topArtistIDs.join(',');
-    var options = {
-      url: `https://api.spotify.com/v1/recommendations?seed_artists=${artistSeedList}`,
-      headers: {
-        'Authorization': 'Bearer ' + access_token
-      },
-      json: true
-    };
-    ///use artist id's for a new API request
-    request.get(options, function(error, response, body) {
-      ///setting value of tracks to the tracks array within body///
-      let tracks = body.tracks;
-      //blank array to hold artist recs///
-      let artistRecommendations = [];
-      ///blank array to hold artist images
-      ///looping thru tracks array   
-      for (let track of tracks) {
-        //looping thru artist array
-        let artists = track.artists;
-        //grabbing image urls
-        const album = track.album;
-        const images = album.images;
-        let firstImage = images[0].url;
-        for (let artist of artists) {
-          //creating object to hold artist+ matching id//
-          let artistAndID = {
-            name: artist.name,
-            id: artist.id,
-            images: firstImage
-          };
-          //console.log(artistAndID);
-          artistRecommendations.push(artistAndID);
+        if (!authResponse.ok) {
+            return res.redirect('/#' + querystring.stringify({ error: 'invalid_token' }));
         }
-      }
-      artistRecommendations = filterResults(artistRecommendations);
-      res.render('pages/recommendations', {recList: artistRecommendations});
-    });
-  });
+
+        res.cookie('access_token', body.access_token);
+        res.cookie('refresh_token', body.refresh_token);
+
+        return res.redirect('/recommendations?' + querystring.stringify({
+            access_token: body.access_token,
+            refresh_token: body.refresh_token
+        }));
+    } catch (error) {
+        console.error('Error fetching token:', error);
+        return res.redirect('/#' + querystring.stringify({ error: 'server_error' }));
+    }
 });
 
-// define the about route
-/*router.get('/about', function (req, res) {
-  res.send('About birds')
-})
-//$('#logOut').click(function() {
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
-    res.redirect('/login');
-  });//*/
+router.get('/refresh_token', async (req, res) => {
+    const refresh_token = req.query.refresh_token;
 
-  module.exports = router;
+    try {
+        const refreshResponse = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + Buffer.from(`${client_id}:${client_secret}`).toString('base64'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: querystring.stringify({
+                grant_type: 'refresh_token',
+                refresh_token
+            })
+        });
+
+        const body = await refreshResponse.json();
+
+        if (refreshResponse.ok) {
+            return res.json({ access_token: body.access_token });
+        } else {
+            return res.status(400).json({ error: 'failed_to_refresh_token' });
+        }
+    } catch (error) {
+        console.error('Error refreshing token:', error);
+        return res.status(500).json({ error: 'server_error' });
+    }
+});
+
+router.get('/recommendations', async (req, res) => {
+    const access_token = req.cookies.access_token;
+    const refresh_token = req.cookies.refresh_token;
+
+    if (!access_token || !refresh_token) {
+        return res.redirect('/login');
+    }
+
+    try {
+
+        const topArtistsResponse = await fetch('https://api.spotify.com/v1/me/top/artists?limit=10', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${access_token}` }
+        });
+
+        const topArtistsData = await topArtistsResponse.json();
+        console.log('Top Artists Data:', topArtistsData);
+
+        if (!topArtistsResponse.ok) {
+            throw new Error(`Failed to fetch top artists: ${topArtistsData.error.message}`);
+        }
+
+
+        const genres = topArtistsData.items.reduce((acc, artist) => {
+            return [...acc, ...artist.genres];  
+        }, []);
+
+        
+        const uniqueGenres = [...new Set(genres)].slice(0, 4);  
+
+        console.log('Genres for search:', uniqueGenres);
+
+
+        let relatedArtists = [];
+        for (const genre of uniqueGenres) {
+            try {
+
+                const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=genre:${genre}&type=artist&limit=10`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${access_token}` }
+                });
+
+                const searchData = await searchResponse.json();
+                console.log(`Artists found in genre "${genre}":`, searchData);
+
+                if (!searchResponse.ok) {
+                    throw new Error(`Failed to fetch artists for genre ${genre}`);
+                }
+
+                relatedArtists = [
+                    ...relatedArtists,
+                    ...searchData.artists.items.map(artist => ({
+                        name: artist.name,
+                        id: artist.id,
+                        images: artist.images.length > 0 ? artist.images[0].url : null,
+                        popularity: artist.popularity, 
+                        genres: artist.genres 
+                    }))
+                ];
+
+            } catch (error) {
+                console.error('Error fetching artists for genre:', error);
+            }
+        }
+
+
+        relatedArtists = relatedArtists.filter(artist =>
+            !topArtistsData.items.some(topArtist => topArtist.id === artist.id)
+        );
+
+        relatedArtists = relatedArtists.sort((a, b) => b.popularity - a.popularity);
+
+        relatedArtists = relatedArtists.filter(artist =>
+            artist.genres.some(genre => uniqueGenres.includes(genre))
+        );
+
+      
+        relatedArtists = filterResults(relatedArtists); 
+
+        return res.render('pages/recommendations', { recList: relatedArtists });
+
+    } catch (error) {
+        console.error('Error fetching recommendations:', error);
+        return res.redirect('/#' + querystring.stringify({ error: 'failed_to_fetch_recommendations' }));
+    }
+});
+
+
+module.exports = router;
