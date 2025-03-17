@@ -10,7 +10,6 @@ const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 const redirect_uri = process.env.REDIRECT_URI; // Your redirect URI
 const stateKey = 'spotify_auth_state';
-console.log(redirect_uri)
 router.use(cookieParser());
 
 router.get('/login', (req, res) => {
