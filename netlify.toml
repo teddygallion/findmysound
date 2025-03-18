@@ -1,0 +1,9 @@
+[build]
+  command = "npm install && npm run build"
+  publish = "authorization_code/public"  
+
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
