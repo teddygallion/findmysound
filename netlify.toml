@@ -1,9 +1,11 @@
 [build]
   command = "npm install && npm run build"
   publish = "authorization_code/public"  
+  functions ="functions"
 
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  

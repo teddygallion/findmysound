@@ -2,11 +2,10 @@ const ejs = require('ejs');
 const fs = require('fs');
 const path = require('path');
 
-// Define paths relative to the root directory
-const viewsDir = path.join(__dirname, 'authorization_code/views'); // Path to views
-const publicDir = path.join(__dirname, 'authorization_code/public'); // Path to public
+const viewsDir = path.join(__dirname, 'authorization_code/views'); 
+const publicDir = path.join(__dirname, 'authorization_code/public'); 
 
-// List of EJS templates to render
+
 const templates = [
   'index.ejs',
   'pages/recommendations.ejs',
@@ -14,12 +13,11 @@ const templates = [
   'recommendationList.ejs'
 ];
 
-// Render each EJS template to HTML
 templates.forEach(template => {
   const templatePath = path.join(viewsDir, template);
   const outputPath = path.join(publicDir, template.replace('.ejs', '.html'));
 
-  // Check if the template file exists
+
   if (!fs.existsSync(templatePath)) {
     console.error(`Template file not found: ${templatePath}`);
     return;
