@@ -116,8 +116,7 @@ router.get('/recommendations', async (req, res) => {
         });
 
         const topArtistsData = await topArtistsResponse.json();
-        console.log('Top Artists Data:', topArtistsData);
-
+    
         if (!topArtistsResponse.ok) {
             throw new Error(`Failed to fetch top artists: ${topArtistsData.error.message}`);
         }
@@ -130,7 +129,6 @@ router.get('/recommendations', async (req, res) => {
         
         const uniqueGenres = [...new Set(genres)].slice(0, 4);  
 
-        console.log('Genres for search:', uniqueGenres);
 
 
         let relatedArtists = [];
@@ -143,8 +141,7 @@ router.get('/recommendations', async (req, res) => {
                 });
 
                 const searchData = await searchResponse.json();
-                console.log(`Artists found in genre "${genre}":`, searchData);
-
+              
                 if (!searchResponse.ok) {
                     throw new Error(`Failed to fetch artists for genre ${genre}`);
                 }
