@@ -3,7 +3,7 @@ import express from 'express';
 import fetch from 'node-fetch';
 import querystring from 'querystring';
 import cookieParser from 'cookie-parser';
-import { generateRandomString, filterResults } from '../utils.mjs';  // Assuming utils is now utils.mjs
+import { generateRandomString, filterResults } from '../utils.js';  // Assuming utils is now utils.mjs
 
 // Load environment variables
 import dotenv from 'dotenv';

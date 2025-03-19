@@ -2,11 +2,17 @@ import path from 'path';
 import express from 'express'; // Express web server framework
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import router from './routers/router.mjs';  // Assuming router.js is now router.mjs
+import router from './routers/router.js';  
 import dotenv from 'dotenv';
 dotenv.config();
 
 const PORT = process.env.PORT;
+
+// Define __dirname for ES modules
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.set('view engine', 'ejs');
@@ -21,8 +27,10 @@ app.listen(PORT, () => {
   console.log(`Listening on http://localhost:${PORT}`);
 });
 
-// Handle logout (this route can be added to the router file)
+// Handle logout
 app.get('/logout', (req, res) => {
   res.clearCookie('spotify_auth_state');
+  res.clearCookie('access_token'); // Clear access token cookie
+  res.clearCookie('refresh_token'); // Clear refresh token cookie
   res.redirect('/'); // Redirect to home page after logging out
 });
