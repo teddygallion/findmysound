@@ -2,7 +2,7 @@
   command = "npm install && npm run build"
   publish = "authorization_code/public"  
   functions ="functions"
-
+  environment = { NODE_VERSION = "16" }
 
 [[redirects]]
   from = "/*"

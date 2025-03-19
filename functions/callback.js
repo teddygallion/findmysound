@@ -1,26 +1,22 @@
-const dotenv = require('dotenv').config();
-const express = require('express');
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const router = express.Router();
-const querystring = require('querystring');
-const cookieParser = require('cookie-parser');
-const { generateRandomString, filterResults } = require('../utils');
+import path from 'path';
+import querystring from 'querystring';
+import { default as fetch } from 'node-fetch';  // Dynamic import for fetch
+import { generateRandomString } from '../authorization_code/utils.js';  // Ensure the correct path with .js extension
 
-const client_id = process.env.CLIENT_ID;
-const client_secret = process.env.CLIENT_SECRET;
-const redirect_uri = process.env.REDIRECT_URI; // Your redirect URI
-const stateKey = 'spotify_auth_state';
+// Load environment variables
+import dotenv from 'dotenv';
+dotenv.config();
 
-const querystring = require('querystring');
-const { generateRandomString } = require('../utils');
-
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const querystring = require('querystring');
-
-exports.handler = async (event, context) => {
+export const handler = async (event, context) => {
   const { code, state } = event.queryStringParameters;
-  const storedState = event.cookies?.spotify_auth_state;
 
+  const cookies = event.headers?.cookie
+    ? Object.fromEntries(event.headers.cookie.split('; ').map(c => c.split('=')))
+    : {};
+  const storedState = cookies.spotify_auth_state;
+  
+  console.log('State from callback URL:', state);
+  console.log('Stored state from cookie:', storedState);
   if (state === null || state !== storedState) {
     return {
       statusCode: 302,

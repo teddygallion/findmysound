@@ -3,8 +3,8 @@
   <head>
     <title>Find My Sound</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous"/>   
-     <link href="https://fonts.googleapis.com/css?family=Open+Sans+Condensed:700&display=swap" rel="stylesheet"/>
-     <link rel ='stylesheet' type ='text/css' href ="styles/style.css"/>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans+Condensed:700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" type="text/css" href="styles/style.css"/>
   </head>
 
   <body> 
@@ -15,17 +15,15 @@
         <img id="fms-preview" alt="FindMySound preview 2" src="https://i.imgur.com/BodYNWZ.png"></img>
         <h2> Finding new tunes for you is all we do.</h2>
         <p>Here at FMS we consider ourselves music junkies, but we wanted to make the process of finding new artists and bands faster and easier than ever before. So we take your top artists and find artists that are the most similar to them, and show you their top songs! </p>
-       
-       
-        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+        <a href="/.netlify/functions/login" class="btn btn-primary">Log in with Spotify</a>
       </div>
       <div id="loggedin">
-        <div id="user-profile">
+        <div id="user-profile"></div>
+        <div id="recommendations">
+          <h2>Your Recommendations</h2>
+          <ul id="rec-list"></ul>
         </div>
-        <div id ="recs">
-        </div>
-        <div id="oauth">
-        </div>
+        <div id="oauth"></div>
         <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
       </div>
     </div>
@@ -62,19 +60,14 @@
     <script src="https://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script>
       (function() {
-
-        /**
-         * Obtains parameters from the hash of the URL
-         * @return Object
-         */
-        function getHashParams() {
-          var hashParams = {};
+        function getQueryParams() {
+          var queryParams = {};
           var e, r = /([^&;=]+)=?([^&;]*)/g,
-              q = window.location.hash.substring(1);
-          while ( e = r.exec(q)) {
-             hashParams[e[1]] = decodeURIComponent(e[2]);
+              q = window.location.search.substring(1);
+          while (e = r.exec(q)) {
+             queryParams[e[1]] = decodeURIComponent(e[2]);
           }
-          return hashParams;
+          return queryParams;
         }
 
         var userProfileSource = document.getElementById('user-profile-template').innerHTML,
@@ -85,7 +78,7 @@
             oauthTemplate = Handlebars.compile(oauthSource),
             oauthPlaceholder = document.getElementById('oauth');
 
-        var params = getHashParams();
+        var params = getQueryParams();
 
         var access_token = params.access_token,
             refresh_token = params.refresh_token,
@@ -95,33 +88,50 @@
           alert('There was an error during the authentication');
         } else {
           if (access_token) {
-            // render oauth info
+            // Render oauth info
             oauthPlaceholder.innerHTML = oauthTemplate({
               access_token: access_token,
               refresh_token: refresh_token
             });
 
+            // Fetch user profile
             $.ajax({
-                url: 'https://api.spotify.com/v1/me',
-                headers: {
-                  'Authorization': 'Bearer ' + access_token
-                },
-                success: function(response) {
-                  userProfilePlaceholder.innerHTML = userProfileTemplate(response);
+              url: 'https://api.spotify.com/v1/me',
+              headers: {
+                'Authorization': 'Bearer ' + access_token
+              },
+              success: function(response) {
+                userProfilePlaceholder.innerHTML = userProfileTemplate(response);
 
-                  $('#login').hide();
-                  $('#loggedin').show();
-                }
+                $('#login').hide();
+                $('#loggedin').show();
+              }
+            });
+
+            // Fetch recommendations
+            $.ajax({
+              url: '/.netlify/functions/recommendations',
+              headers: {
+                'Authorization': 'Bearer ' + access_token
+              },
+              success: function(response) {
+                const recList = document.getElementById('rec-list');
+                response.recList.forEach(artist => {
+                  const li = document.createElement('li');
+                  li.textContent = artist.name;
+                  recList.appendChild(li);
+                });
+              }
             });
           } else {
-              // render initial screen
-              $('#login').show();
-              $('#loggedin').hide();
+            // Render initial screen
+            $('#login').show();
+            $('#loggedin').hide();
           }
 
           document.getElementById('obtain-new-token').addEventListener('click', function() {
             $.ajax({
-              url: '/refresh_token',
+              url: '/.netlify/functions/refresh_token',
               data: {
                 'refresh_token': refresh_token
               }
@@ -138,4 +148,3 @@
     </script>
   </body>
 </html>
-

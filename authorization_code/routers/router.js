@@ -1,15 +1,20 @@
-const dotenv = require('dotenv').config();
-const express = require('express');
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const router = express.Router();
-const querystring = require('querystring');
-const cookieParser = require('cookie-parser');
-const { generateRandomString, filterResults } = require('../utils');
+import path from 'path';
+import express from 'express';
+import fetch from 'node-fetch';
+import querystring from 'querystring';
+import cookieParser from 'cookie-parser';
+import { generateRandomString, filterResults } from '../utils.mjs';  // Assuming utils is now utils.mjs
+
+// Load environment variables
+import dotenv from 'dotenv';
+dotenv.config();
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 const redirect_uri = process.env.REDIRECT_URI; // Your redirect URI
 const stateKey = 'spotify_auth_state';
+
+const router = express.Router();
 router.use(cookieParser());
 
 router.get('/login', (req, res) => {
@@ -109,39 +114,33 @@ router.get('/recommendations', async (req, res) => {
     }
 
     try {
-
         const topArtistsResponse = await fetch('https://api.spotify.com/v1/me/top/artists?limit=10', {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${access_token}` }
         });
 
         const topArtistsData = await topArtistsResponse.json();
-    
+
         if (!topArtistsResponse.ok) {
             throw new Error(`Failed to fetch top artists: ${topArtistsData.error.message}`);
         }
-
 
         const genres = topArtistsData.items.reduce((acc, artist) => {
             return [...acc, ...artist.genres];  
         }, []);
 
-        
         const uniqueGenres = [...new Set(genres)].slice(0, 4);  
-
-
 
         let relatedArtists = [];
         for (const genre of uniqueGenres) {
             try {
-
                 const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=genre:${genre}&type=artist&limit=10`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${access_token}` }
                 });
 
                 const searchData = await searchResponse.json();
-              
+
                 if (!searchResponse.ok) {
                     throw new Error(`Failed to fetch artists for genre ${genre}`);
                 }
@@ -162,7 +161,6 @@ router.get('/recommendations', async (req, res) => {
             }
         }
 
-
         relatedArtists = relatedArtists.filter(artist =>
             !topArtistsData.items.some(topArtist => topArtist.id === artist.id)
         );
@@ -173,8 +171,7 @@ router.get('/recommendations', async (req, res) => {
             artist.genres.some(genre => uniqueGenres.includes(genre))
         );
 
-      
-        relatedArtists = filterResults(relatedArtists); 
+        relatedArtists = filterResults(relatedArtists);
 
         return res.render('pages/recommendations', { recList: relatedArtists });
 
@@ -184,5 +181,4 @@ router.get('/recommendations', async (req, res) => {
     }
 });
 
-
-module.exports = router;
+export default router; // Export the router

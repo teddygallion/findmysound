@@ -1,22 +1,13 @@
-const dotenv = require('dotenv').config();
-const express = require('express');
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const router = express.Router();
-const querystring = require('querystring');
-const cookieParser = require('cookie-parser');
-const { generateRandomString, filterResults } = require('../utils');
+import fetch from 'node-fetch';
+import querystring from 'querystring';
 
-const client_id = process.env.CLIENT_ID;
-const client_secret = process.env.CLIENT_SECRET;
-const redirect_uri = process.env.REDIRECT_URI; // Your redirect URI
-const stateKey = 'spotify_auth_state';
+export const handler = async (event, context) => {
+  const cookies = event.headers.cookie || ''; // Get cookies from headers
+  const access_token = cookies.match(/access_token=([^;]+)/)?.[1];
+  const refresh_token = cookies.match(/refresh_token=([^;]+)/)?.[1];
 
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const { filterResults } = require('../utils');
-
-exports.handler = async (event, context) => {
-  const access_token = event.cookies?.access_token;
-  const refresh_token = event.cookies?.refresh_token;
+  console.log('Access Token:', access_token);
+  console.log('Refresh Token:', refresh_token);
 
   if (!access_token || !refresh_token) {
     return {
@@ -34,18 +25,17 @@ exports.handler = async (event, context) => {
     });
 
     const topArtistsData = await topArtistsResponse.json();
+    console.log('Top Artists Data:', topArtistsData); // Log response
 
     if (!topArtistsResponse.ok) {
       throw new Error(`Failed to fetch top artists: ${topArtistsData.error.message}`);
     }
 
-    const genres = topArtistsData.items.reduce((acc, artist) => {
-      return [...acc, ...artist.genres];
-    }, []);
-
+    let genres = topArtistsData.items?.flatMap(artist => artist.genres) || [];
     const uniqueGenres = [...new Set(genres)].slice(0, 4);
 
     let relatedArtists = [];
+
     for (const genre of uniqueGenres) {
       try {
         const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=genre:${genre}&type=artist&limit=10`, {
@@ -54,21 +44,21 @@ exports.handler = async (event, context) => {
         });
 
         const searchData = await searchResponse.json();
+        console.log(`Search Data for ${genre}:`, searchData); // Log response
 
-        if (!searchResponse.ok) {
+        if (!searchResponse.ok || !searchData.artists) {
           throw new Error(`Failed to fetch artists for genre ${genre}`);
         }
 
-        relatedArtists = [
-          ...relatedArtists,
+        relatedArtists.push(
           ...searchData.artists.items.map(artist => ({
             name: artist.name,
             id: artist.id,
-            images: artist.images.length > 0 ? artist.images[0].url : null,
+            image: artist.images?.[0]?.url || null,
             popularity: artist.popularity,
             genres: artist.genres
           }))
-        ];
+        );
       } catch (error) {
         console.error('Error fetching artists for genre:', error);
       }
@@ -79,15 +69,13 @@ exports.handler = async (event, context) => {
     );
 
     relatedArtists = relatedArtists.sort((a, b) => b.popularity - a.popularity);
+    relatedArtists = relatedArtists.filter(artist => artist.genres.some(genre => uniqueGenres.includes(genre)));
 
-    relatedArtists = relatedArtists.filter(artist =>
-      artist.genres.some(genre => uniqueGenres.includes(genre))
-    );
-
-    relatedArtists = filterResults(relatedArtists);
+    console.log('Final Recommendations:', relatedArtists); // Log final data
 
     return {
       statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recList: relatedArtists })
     };
   } catch (error) {
